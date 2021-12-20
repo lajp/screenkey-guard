@@ -54,8 +54,7 @@ int main(int argc, char** argv) {
                 fscanf(pipe, "%d", &ppid);
             }
             pclose(pipe);
-            if((found = (ppid > 0))) {
-                printf("%s is running\n", programs[i]);
+            if((found = ppid)) {
                 break;
             }
         }
