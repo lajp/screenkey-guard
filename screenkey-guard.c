@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <signal.h>
-#include <unistd.h>
+#include <unistd.h> // usleep()
+#include <string.h>
 
 static int running = 1;
 
@@ -26,6 +27,8 @@ pid_t new_screenkey() {
     }
 }
 
+const char* programs[] = { "sudo", "pinentry", "doas", NULL };
+
 int main(int argc, char** argv) {
     pid_t screenkey;
     if(argc >= 2) {
@@ -40,19 +43,23 @@ int main(int argc, char** argv) {
     signal(SIGINT, handleInt);
     bool paused = false;
     while(running) {
-        FILE* sudo = popen("pgrep sudo", "r");
-        pid_t sudopid = 0;
-        if(sudo) {
-            fscanf(sudo, "%d", &sudopid);
+        bool found = 0;
+        for(int i = 0; programs[i]; ++i) {
+            char* command = malloc(7*strlen(programs[i]));
+            strcpy(command, "pgrep ");
+            strcat(command, programs[i]);
+            FILE* pipe = popen(command, "r");
+            pid_t ppid = 0;
+            if(pipe) {
+                fscanf(pipe, "%d", &ppid);
+            }
+            pclose(pipe);
+            if((found = (ppid > 0))) {
+                printf("%s is running\n", programs[i]);
+                break;
+            }
         }
-        pclose(sudo);
-        FILE* pinentry = popen("pgrep pinentry", "r");
-        pid_t pinentrypid = 0;
-        if(pinentry) {
-            fscanf(pinentry, "%d", &pinentrypid);
-        }
-        pclose(pinentry);
-        if(sudopid != 0 || pinentrypid != 0) {
+        if(found) {
             if(!paused) {
                 paused = true;
                 printf("Killing screenkey of PID %d\n", screenkey);
@@ -62,7 +69,7 @@ int main(int argc, char** argv) {
             paused = false;
             screenkey = new_screenkey();
         }
-        usleep(100);
+        usleep(1000);
     }
     return 0;
 }
