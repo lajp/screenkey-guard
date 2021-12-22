@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <unistd.h> // usleep()
 #include <string.h>
+#include <dirent.h>
 
 static int running = 1;
 
@@ -27,6 +28,38 @@ pid_t new_screenkey() {
     }
 }
 
+bool prunning(const char* program) {
+    struct dirent* dirent;
+    DIR* proc = opendir("/proc");
+    if(!proc) {
+        perror("Unable to open /proc: ");
+        exit(EXIT_FAILURE);
+    }
+    char fname[512];
+    char pname[256];
+    while((dirent = readdir(proc)) != NULL) {
+        if(dirent->d_type != 4) {
+            // Not a directory
+            continue;
+        }
+        sprintf(fname, "/proc/%s/status", dirent->d_name);
+        FILE* status = fopen(fname, "r");
+        if(!status) {
+            continue;
+        }
+        if(fscanf(status, "Name:%*[ \t]%s\n", pname) != EOF) {
+            if(strstr(pname, program) != NULL) {
+                fclose(status);
+                return 1;
+            }
+        }
+        fclose(status);
+    }
+    free(dirent);
+    closedir(proc);
+    return 0;
+}
+
 const char* programs[] = { "sudo", "pinentry", "doas", NULL };
 
 int main(int argc, char** argv) {
@@ -42,19 +75,12 @@ int main(int argc, char** argv) {
     }
     signal(SIGINT, handleInt);
     bool paused = false;
+    bool found = false;
     while(running) {
-        bool found = 0;
+        found = 0;
         for(int i = 0; programs[i]; ++i) {
-            char* command = malloc(7*strlen(programs[i]));
-            strcpy(command, "pgrep ");
-            strcat(command, programs[i]);
-            FILE* pipe = popen(command, "r");
-            pid_t ppid = 0;
-            if(pipe) {
-                fscanf(pipe, "%d", &ppid);
-            }
-            pclose(pipe);
-            if((found = ppid)) {
+            found = prunning(programs[i]);
+            if(found) {
                 break;
             }
         }
