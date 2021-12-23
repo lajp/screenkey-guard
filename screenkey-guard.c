@@ -77,7 +77,6 @@ int main(int argc, char** argv) {
     bool paused = false;
     bool found = false;
     while(running) {
-        found = 0;
         for(int i = 0; programs[i]; ++i) {
             found = prunning(programs[i]);
             if(found) {
@@ -94,7 +93,7 @@ int main(int argc, char** argv) {
             paused = false;
             screenkey = new_screenkey();
         }
-        usleep(1000);
+        usleep(100000);
     }
     return 0;
 }
