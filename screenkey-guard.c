@@ -50,6 +50,7 @@ bool prunning(const char* program) {
         if(fscanf(status, "Name:%*[ \t]%s\n", pname) != EOF) {
             if(strstr(pname, program) != NULL) {
                 fclose(status);
+                closedir(proc);
                 return 1;
             }
         }
