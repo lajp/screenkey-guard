@@ -56,7 +56,6 @@ bool prunning(const char* program) {
         }
         fclose(status);
     }
-    free(dirent);
     closedir(proc);
     return 0;
 }
